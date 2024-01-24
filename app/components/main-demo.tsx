@@ -34,6 +34,20 @@ export const SpeechSynthesisDemo = () => {
     <div className="flex flex-col items-center justify-center w-full max-w-5xl">
       <div className="flex flex-col space-y-6 w-full">
         <div className="flex items-center">
+          <label htmlFor="providerOptions" className="w-1/6 text-right mr-4">
+            Provider
+          </label>
+          <select
+            id="providerOptions"
+            value={provider}
+            onChange={(e) => setProvider(e.target.value as 'azure' | 'elevenlabs')}
+            className="flex-1 py-2 px-4 border rounded"
+          >
+            <option value="azure">Azure</option>
+            <option value="elevenlabs">Eleven Labs</option>
+          </select>
+        </div>
+        <div className="flex items-center">
           <label htmlFor="subscriptionKey" className="w-1/6 text-right mr-4">
             Subscription Key
           </label>
@@ -133,6 +147,7 @@ export const SpeechSynthesisDemo = () => {
             Text
           </label>
           <textarea
+            id="synthesisText"
             value={textToSynthesize}
             onChange={(e) => setTextToSynthesize(e.target.value)}
             className="flex-1 py-2 px-4 border rounded"
@@ -173,35 +188,14 @@ export const SpeechSynthesisDemo = () => {
         </div>
 
         <div className="flex items-start">
-          <label htmlFor="resultsDiv" className="w-1/6 text-right mr-4 align-top">
-            Results
-          </label>
-          <textarea
-            id="resultsDiv"
-            className="flex-1 py-2 px-4 border rounded"
-            style={{ height: '50px' }}
-          ></textarea>
+          <label className="w-1/6 text-right mr-4 align-top">Events</label>
+          <textarea disabled id="eventsDiv" className="flex-1 py-2 px-4 border rounded"></textarea>
         </div>
 
         <div className="flex items-start">
-          <label htmlFor="eventsDiv" className="w-1/6 text-right mr-4 align-top">
-            Events
-          </label>
-          <textarea
-            id="eventsDiv"
-            className="flex-1 py-2 px-4 border rounded"
-            style={{ height: '50px' }}
-          ></textarea>
-        </div>
-
-        <div className="flex items-start">
-          <label htmlFor="highlightDiv" className="w-1/6 text-right mr-4 align-top">
-            Highlight
-          </label>
+          <label className="w-1/6 text-right mr-4 align-top">Highlight</label>
           <div
-            id="highlightDiv"
-            className="flex-1 py-2 px-4 border rounded"
-            style={{ height: '50px' }}
+            className="flex-1 py-2 px-4 border rounded min-h-10"
             dangerouslySetInnerHTML={{ __html: highlightDiv }}
           />
         </div>

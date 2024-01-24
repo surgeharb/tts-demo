@@ -33,7 +33,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
       setSdkInitialized(true);
       setFormatOptions(
         // @ts-ignore
-        Object.entries(window.SpeechSDK.SpeechSynthesisOutputFormat)
+        Object.entries(SpeechSDK.SpeechSynthesisOutputFormat)
           .filter(([key, value]) => isNaN(+key) && !key.includes('Siren'))
           .map(([key, value]) => ({ key, value }))
       );
@@ -45,7 +45,6 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
         const currentTime = player.current.currentTime;
         let wordBoundary;
         for (const e of wordBoundaryList) {
-          console.log('🚀 ~ e:', e);
           if (currentTime * 1000 > e.audioOffset / 10000) {
             wordBoundary = e;
           } else {
@@ -111,6 +110,8 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
     setHighlightDiv('');
     setWordBoundaryList([]);
 
+    const timeStart = performance.now();
+
     const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, region);
 
     speechConfig.speechSynthesisVoiceName =
@@ -155,7 +156,9 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
 
     // The synthesis started event signals that the synthesis is started.
     synthesizer.synthesisStarted = function (s, e) {
-      window.console.log(e);
+      const timeEnd = performance.now();
+      const elapsed = timeEnd - timeStart;
+      console.log('time till first audio chunk is received: ' + elapsed / 1e3 + 's');
       setEvents((prevEvents) => {
         return prevEvents + '(synthesis started)' + '\r\n';
       });
@@ -167,7 +170,9 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
 
     // The event synthesis completed signals that the synthesis is completed.
     synthesizer.synthesisCompleted = function (s, e) {
-      console.log(e);
+      const timeEnd = performance.now();
+      const elapsed = timeEnd - timeStart;
+      console.log('time till synthesis is completed: ' + elapsed / 1e3 + 's');
       setEvents((prevEvents) => {
         return (
           prevEvents +
@@ -188,7 +193,6 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
       if (cancellationDetails.reason === SpeechSDK.CancellationReason.Error) {
         str += ': ' + e.result.errorDetails;
       }
-      window.console.log(e);
       setEvents((prevEvents) => {
         return prevEvents + str + '\r\n';
       });
@@ -201,7 +205,6 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
     // This event signals that word boundary is received. This indicates the audio boundary of each word.
     // The unit of e.audioOffset is tick (1 tick = 100 nanoseconds), divide by 10,000 to convert to milliseconds.
     synthesizer.wordBoundary = function (s, e) {
-      window.console.log(e);
       setEvents((prevEvents) => {
         return (
           prevEvents +
@@ -215,35 +218,6 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
       });
       setWordBoundaryList((prevWordBoundaryList) => {
         return [...prevWordBoundaryList, e];
-      });
-    };
-
-    synthesizer.visemeReceived = function (s, e) {
-      window.console.log(e);
-
-      setEvents((prevEvents) => {
-        return (
-          prevEvents +
-          '(Viseme), Audio offset: ' +
-          e.audioOffset / 10000 +
-          'ms. Viseme ID: ' +
-          e.visemeId +
-          '\n'
-        );
-      });
-    };
-
-    synthesizer.bookmarkReached = function (s, e) {
-      window.console.log(e);
-      setEvents((prevEvents) => {
-        return (
-          prevEvents +
-          '(Bookmark reached), Audio offset: ' +
-          e.audioOffset / 10000 +
-          'ms. Bookmark text: ' +
-          e.text +
-          '\n'
-        );
       });
     };
 
