@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Elevenlabs } from '../lib/elevenlabs';
 
 declare global {
   interface Window {
@@ -9,6 +10,11 @@ declare global {
 type Voice = {
   Name: string;
   ShortName: string;
+};
+
+type ElevenlabsVoice = {
+  voice_id: string;
+  name: string;
 };
 
 export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
@@ -35,6 +41,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
   const [downloadBtnDisabled, setDownloadBtnDisabled] = useState(true);
 
   const player = useRef<any>(null);
+  const lastProvider = useRef(provider);
 
   useEffect(() => {
     if (window === undefined) {
@@ -84,7 +91,22 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
     };
   }, [textToSynthesize, wordBoundaryList]);
 
+  useEffect(() => {
+    if (provider !== lastProvider.current) {
+      lastProvider.current = provider;
+      setVoiceList([]);
+    }
+  }, [provider]);
+
   const updateVoiceList = () => {
+    if (provider === 'azure') {
+      updateVoiceListAzure();
+    } else {
+      updateVoiceListElevenLabs();
+    }
+  };
+
+  const updateVoiceListAzure = () => {
     setVoicesLoading(true);
     fetch(
       `https://${region}.tts.speech.${
@@ -116,6 +138,37 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
       });
   };
 
+  const updateVoiceListElevenLabs = () => {
+    setVoicesLoading(true);
+    fetch('https://api.elevenlabs.io/v1/voices', {
+      method: 'GET',
+      headers: {
+        'xi-api-key': subscriptionKey,
+      },
+    })
+      .then((response) => {
+        if (response.ok) {
+          return response.json();
+        }
+        throw new Error(response.statusText);
+      })
+      .then(({ voices }: { voices: ElevenlabsVoice[] }) => {
+        setSelectedVoice(voices[0].voice_id);
+        setVoiceList(
+          voices.map((voice) => ({
+            Name: voice.voice_id,
+            ShortName: voice.name,
+          }))
+        );
+      })
+      .catch((err) => {
+        console.error(err);
+      })
+      .finally(() => {
+        setVoicesLoading(false);
+      });
+  };
+
   const startSynthesis = () => {
     if (window === undefined) {
       return;
@@ -131,37 +184,51 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
 
     const timeStart = performance.now();
 
-    const SpeechSDK = window.SpeechSDK || {};
+    const SpeechSDK = provider === 'azure' ? window.SpeechSDK || {} : new Elevenlabs();
     const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, region);
 
-    speechConfig.speechSynthesisVoiceName =
-      voiceList.length > 0
-        ? voiceList.find((voice) => voice.ShortName === selectedVoice)?.Name ?? ''
-        : '';
+    console.log('voiceList', voiceList);
+    console.log('selectedVoice', selectedVoice);
 
-    speechConfig.speechSynthesisOutputFormat =
-      SpeechSDK.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3;
+    let synthesizer: any;
 
-    player.current = new SpeechSDK.SpeakerAudioDestination();
+    if (provider === 'azure') {
+      speechConfig.speechSynthesisVoiceName =
+        voiceList.length > 0
+          ? voiceList.find((voice) => voice.ShortName === selectedVoice)?.Name ?? ''
+          : '';
 
-    if (player.current) {
-      player.current.onAudioStart = function (_: any) {
-        console.log('playback started');
-      };
-      player.current.onAudioEnd = function (_: any) {
-        setPauseBtnDisabled(true);
-        setResumeBtnDisabled(true);
-        setStartBtnDisabled(false);
-        setDownloadBtnDisabled(false);
-        console.log('playback finished');
-        player.current = null;
-      };
+      speechConfig.speechSynthesisOutputFormat =
+        SpeechSDK.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3;
+
+      player.current = new SpeechSDK.SpeakerAudioDestination();
+
+      if (player.current) {
+        player.current.onAudioStart = function (_: any) {
+          console.log('playback started');
+        };
+        player.current.onAudioEnd = function (_: any) {
+          setPauseBtnDisabled(true);
+          setResumeBtnDisabled(true);
+          setStartBtnDisabled(false);
+          setDownloadBtnDisabled(false);
+          console.log('playback finished');
+          player.current = null;
+        };
+      }
+
+      const audioConfig = SpeechSDK.AudioConfig.fromSpeakerOutput(player.current);
+      synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
+    } else {
+      // set the voice name here for Elevenlabs
+      synthesizer = SpeechSDK.getSynthesizer();
     }
 
-    const audioConfig = window.SpeechSDK.AudioConfig.fromSpeakerOutput(player.current);
-    let synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
-
     synthesizer.synthesizing = function (_: any, e: any) {
+      if (provider !== 'azure') {
+        return;
+      }
+
       setEvents((prevEvents) => {
         return (
           prevEvents +
@@ -193,6 +260,11 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
       const timeEnd = performance.now();
       const elapsed = timeEnd - timeStart;
       console.log('time till synthesis is completed: ' + elapsed / 1e3 + 's');
+
+      if (provider !== 'azure') {
+        return;
+      }
+
       setEvents((prevEvents) => {
         return (
           prevEvents +
@@ -208,6 +280,10 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
     // The event signals that the service has stopped processing speech.
     // This can happen when an error is encountered.
     synthesizer.SynthesisCanceled = function (_: any, e: any) {
+      if (provider !== 'azure') {
+        return;
+      }
+
       const cancellationDetails = SpeechSDK.CancellationDetails.fromResult(e.result);
       let str = '(cancel) Reason: ' + SpeechSDK.CancellationReason[cancellationDetails.reason];
       if (cancellationDetails.reason === SpeechSDK.CancellationReason.Error) {
@@ -225,6 +301,10 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
     // This event signals that word boundary is received. This indicates the audio boundary of each word.
     // The unit of e.audioOffset is tick (1 tick = 100 nanoseconds), divide by 10,000 to convert to milliseconds.
     synthesizer.wordBoundary = function (_: any, e: any) {
+      if (provider !== 'azure') {
+        return;
+      }
+
       setEvents((prevEvents) => {
         return (
           prevEvents +
@@ -241,42 +321,47 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
       });
     };
 
-    const complete_cb = function (result: any) {
-      if (result.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
-        // resultsDiv.innerHTML += 'synthesis finished';
-        setResults((prevResults) => {
-          return prevResults + 'synthesis finished';
-        });
-      } else if (result.reason === SpeechSDK.ResultReason.Canceled) {
-        // resultsDiv.innerHTML += 'synthesis failed. Error detail: ' + result.errorDetails;
-        setResults((prevResults) => {
-          return prevResults + 'synthesis failed. Error detail: ' + result.errorDetails;
-        });
-      }
-      window.console.log(result);
-      synthesizer.close();
-      synthesizer = undefined;
-    };
-    const err_cb = function (err: any) {
-      setStartBtnDisabled(false);
-      setDownloadBtnDisabled(false);
-      setPhraseDiv((prevPhraseDiv) => {
-        return prevPhraseDiv + err;
-      });
-      window.console.log(err);
-      synthesizer.close();
-      synthesizer = undefined;
-    };
-
     if (!textToSynthesize) {
       alert('Please enter synthesis content.');
       return;
     }
 
-    if (isSSML) {
-      synthesizer.speakSsmlAsync(textToSynthesize, complete_cb, err_cb);
+    if (provider === 'azure') {
+      const complete_cb = function (result: any) {
+        if (result.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
+          // resultsDiv.innerHTML += 'synthesis finished';
+          setResults((prevResults) => {
+            return prevResults + 'synthesis finished';
+          });
+        } else if (result.reason === SpeechSDK.ResultReason.Canceled) {
+          // resultsDiv.innerHTML += 'synthesis failed. Error detail: ' + result.errorDetails;
+          setResults((prevResults) => {
+            return prevResults + 'synthesis failed. Error detail: ' + result.errorDetails;
+          });
+        }
+        window.console.log(result);
+        synthesizer.close();
+        synthesizer = undefined;
+      };
+
+      const err_cb = function (err: any) {
+        setStartBtnDisabled(false);
+        setDownloadBtnDisabled(false);
+        setPhraseDiv((prevPhraseDiv) => {
+          return prevPhraseDiv + err;
+        });
+        window.console.log(err);
+        synthesizer.close();
+        synthesizer = undefined;
+      };
+
+      if (isSSML) {
+        synthesizer.speakSsmlAsync(textToSynthesize, complete_cb, err_cb);
+      } else {
+        synthesizer.speakTextAsync(textToSynthesize, complete_cb, err_cb);
+      }
     } else {
-      synthesizer.speakTextAsync(textToSynthesize, complete_cb, err_cb);
+      SpeechSDK.speakTextAsync(textToSynthesize, synthesizer);
     }
   };
 

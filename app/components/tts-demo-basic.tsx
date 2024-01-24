@@ -8,7 +8,7 @@ export const TtsDemoBasic = () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'xi-api-key': '3b5ebabdd4f743ef9266250211c26333',
+        'xi-api-key': '-old-',
       },
       body: JSON.stringify({
         model_id: 'eleven_monolingual_v1',
