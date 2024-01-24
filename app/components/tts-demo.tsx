@@ -35,7 +35,9 @@ export const TtsDemo = () => {
       fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceID}/stream`, options)
         .then((response) => {
           let count = 0;
+          // @ts-ignore
           const reader = response.body.getReader();
+          // @ts-ignore
           function pump() {
             return reader.read().then(({ done, value }) => {
               if (done) {

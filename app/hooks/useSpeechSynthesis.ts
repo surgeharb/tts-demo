@@ -11,8 +11,6 @@ type Voice = {
   ShortName: string;
 };
 
-const SpeechSDK = window.SpeechSDK;
-
 export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
   const [subscriptionKey, setSubscriptionKey] = useState('');
   const [region, setRegion] = useState('eastus');
@@ -39,6 +37,10 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
   const player = useRef<any>(null);
 
   useEffect(() => {
+    if (window === undefined) {
+      return;
+    }
+
     // initialize the Speech SDK
     const script = document.createElement('script');
     script.src = 'https://aka.ms/csspeech/jsbrowserpackageraw';
@@ -115,6 +117,10 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
   };
 
   const startSynthesis = () => {
+    if (window === undefined) {
+      return;
+    }
+
     if (!subscriptionKey || !region) {
       alert('Please enter your Microsoft Cognitive Services Speech subscription key!');
       return;
@@ -125,6 +131,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
 
     const timeStart = performance.now();
 
+    const SpeechSDK = window.SpeechSDK || {};
     const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, region);
 
     speechConfig.speechSynthesisVoiceName =
