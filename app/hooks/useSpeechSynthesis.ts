@@ -1,9 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 
+declare global {
+  interface Window {
+    SpeechSDK: any;
+  }
+}
+
+type Voice = {
+  Name: string;
+  ShortName: string;
+};
+
+const SpeechSDK = window.SpeechSDK;
+
 export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
   const [subscriptionKey, setSubscriptionKey] = useState('');
   const [region, setRegion] = useState('eastus');
-  const [voiceList, setVoiceList] = useState([]);
+  const [voiceList, setVoiceList] = useState<Voice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState('');
   const [voicesLoading, setVoicesLoading] = useState(false);
   const [formatOptions, setFormatOptions] = useState([]);
@@ -11,7 +24,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
   const [isSSML, setIsSSML] = useState(false);
   const [textToSynthesize, setTextToSynthesize] = useState('');
   const [results, setResults] = useState('');
-  const [wordBoundaryList, setWordBoundaryList] = useState([]);
+  const [wordBoundaryList, setWordBoundaryList] = useState<any[]>([]);
   const [phraseDiv, setPhraseDiv] = useState('');
   const [events, setEvents] = useState('');
   const [highlightDiv, setHighlightDiv] = useState('');
@@ -87,10 +100,10 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
         }
         throw new Error(response.statusText);
       })
-      .then((data) => {
+      .then((data: Voice[]) => {
         const defaultVoice = 'AndrewNeural';
         const selected = data.find((voice) => voice.ShortName.includes(defaultVoice));
-        setSelectedVoice(selected.ShortName);
+        setSelectedVoice(selected ? selected.ShortName : '');
         setVoiceList(data.filter((voice) => voice.ShortName.startsWith('en-')));
       })
       .catch((err) => {
@@ -125,10 +138,10 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
     player.current = new SpeechSDK.SpeakerAudioDestination();
 
     if (player.current) {
-      player.current.onAudioStart = function (_) {
+      player.current.onAudioStart = function (_: any) {
         console.log('playback started');
       };
-      player.current.onAudioEnd = function (_) {
+      player.current.onAudioEnd = function (_: any) {
         setPauseBtnDisabled(true);
         setResumeBtnDisabled(true);
         setStartBtnDisabled(false);
@@ -138,10 +151,10 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
       };
     }
 
-    const audioConfig = SpeechSDK.AudioConfig.fromSpeakerOutput(player.current);
+    const audioConfig = window.SpeechSDK.AudioConfig.fromSpeakerOutput(player.current);
     let synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
 
-    synthesizer.synthesizing = function (s, e) {
+    synthesizer.synthesizing = function (_: any, e: any) {
       setEvents((prevEvents) => {
         return (
           prevEvents +
@@ -155,7 +168,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
     };
 
     // The synthesis started event signals that the synthesis is started.
-    synthesizer.synthesisStarted = function (s, e) {
+    synthesizer.synthesisStarted = function (_: any, e: any) {
       const timeEnd = performance.now();
       const elapsed = timeEnd - timeStart;
       console.log('time till first audio chunk is received: ' + elapsed / 1e3 + 's');
@@ -169,7 +182,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
     };
 
     // The event synthesis completed signals that the synthesis is completed.
-    synthesizer.synthesisCompleted = function (s, e) {
+    synthesizer.synthesisCompleted = function (_: any, e: any) {
       const timeEnd = performance.now();
       const elapsed = timeEnd - timeStart;
       console.log('time till synthesis is completed: ' + elapsed / 1e3 + 's');
@@ -187,7 +200,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
 
     // The event signals that the service has stopped processing speech.
     // This can happen when an error is encountered.
-    synthesizer.SynthesisCanceled = function (s, e) {
+    synthesizer.SynthesisCanceled = function (_: any, e: any) {
       const cancellationDetails = SpeechSDK.CancellationDetails.fromResult(e.result);
       let str = '(cancel) Reason: ' + SpeechSDK.CancellationReason[cancellationDetails.reason];
       if (cancellationDetails.reason === SpeechSDK.CancellationReason.Error) {
@@ -204,7 +217,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
 
     // This event signals that word boundary is received. This indicates the audio boundary of each word.
     // The unit of e.audioOffset is tick (1 tick = 100 nanoseconds), divide by 10,000 to convert to milliseconds.
-    synthesizer.wordBoundary = function (s, e) {
+    synthesizer.wordBoundary = function (_: any, e: any) {
       setEvents((prevEvents) => {
         return (
           prevEvents +
@@ -221,7 +234,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
       });
     };
 
-    const complete_cb = function (result) {
+    const complete_cb = function (result: any) {
       if (result.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
         // resultsDiv.innerHTML += 'synthesis finished';
         setResults((prevResults) => {
@@ -237,7 +250,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
       synthesizer.close();
       synthesizer = undefined;
     };
-    const err_cb = function (err) {
+    const err_cb = function (err: any) {
       setStartBtnDisabled(false);
       setDownloadBtnDisabled(false);
       setPhraseDiv((prevPhraseDiv) => {
