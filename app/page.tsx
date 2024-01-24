@@ -1,4 +1,10 @@
+import { Metadata } from 'next';
 import { SpeechSynthesisDemo } from './components/main-demo';
+
+export const metadata: Metadata = {
+  title: 'Speech Synthesis Demo',
+  description: 'A demo of the Speech Synthesis API',
+};
 
 export default function Home() {
   return (
