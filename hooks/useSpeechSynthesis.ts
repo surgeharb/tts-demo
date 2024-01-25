@@ -25,7 +25,6 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
   const [selectedVoice, setSelectedVoice] = useState('');
   const [voicesLoading, setVoicesLoading] = useState(false);
   const [formatOptions, setFormatOptions] = useState([]);
-  const [selectedFormat, setSelectedFormat] = useState('');
   const [isSSML, setIsSSML] = useState(false);
   const [textToSynthesize, setTextToSynthesize] = useState('');
   const [results, setResults] = useState('');
@@ -33,7 +32,6 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
   const [events, setEvents] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
   const [highlightDiv, setHighlightDiv] = useState('');
-  const [authorizationToken, setAuthorizationToken] = useState(null);
   const [sdkInitialized, setSdkInitialized] = useState(false);
 
   const [startBtnDisabled, setStartBtnDisabled] = useState(false);

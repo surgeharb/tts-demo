@@ -77,8 +77,9 @@ export class Elevenlabs {
 
     mediaSource.addEventListener('sourceopen', () => {
       const sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg');
+      const voiceId = this.voiceName || '21m00Tcm4TlvDq8ikWAM';
 
-      fetch(`https://api.elevenlabs.io/v1/text-to-speech/${this.voiceName}/stream`, options)
+      fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`, options)
         .then((response) => {
           let count = 0;
           // @ts-ignore
