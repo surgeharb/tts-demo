@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, Suspense } from 'react';
+import { useMemo, useState, Suspense, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import {
@@ -236,6 +236,7 @@ const SpeechSynthesis = () => {
             className="flex-1 py-2 px-4 border rounded min-h-10"
             dangerouslySetInnerHTML={{ __html: highlightDiv }}
           />
+          <span className="bg-slate-500" />
         </div>
       </div>
     </div>

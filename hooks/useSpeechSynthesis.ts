@@ -43,7 +43,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
   const lastProvider = useRef(provider);
 
   useEffect(() => {
-    if (window === undefined) {
+    if (typeof window === 'undefined') {
       return;
     }
 
@@ -118,7 +118,11 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
         const defaultVoice = 'AndrewNeural';
         const selected = data.find((voice) => voice.ShortName.includes(defaultVoice));
         setSelectedVoice(selected ? selected.ShortName : '');
-        setVoiceList(data.filter((voice) => voice.ShortName.startsWith('en-')));
+        setVoiceList(
+          data.filter(
+            (voice) => voice.ShortName.startsWith('en-US') || voice.ShortName.startsWith('en-GB')
+          )
+        );
       })
       .catch((err) => {
         console.error(err);
@@ -155,7 +159,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
   };
 
   const startSynthesis = () => {
-    if (window === undefined) {
+    if (typeof window === 'undefined') {
       return;
     }
 
