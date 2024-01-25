@@ -55,7 +55,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
       setFormatOptions(
         // @ts-ignore
         Object.entries(SpeechSDK.SpeechSynthesisOutputFormat)
-          .filter(([key, value]) => isNaN(+key) && !key.includes('Siren'))
+          .filter(([key]) => isNaN(+key) && !key.includes('Siren'))
           .map(([key, value]) => ({ key, value }))
       );
     };
@@ -211,7 +211,11 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
       const audioConfig = SpeechSDK.AudioConfig.fromSpeakerOutput(player.current);
       synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
     } else {
-      SpeechSDK.SpeechConfig.speechSynthesisVoiceName(selectedVoice);
+      SpeechSDK.SpeechConfig.speechSynthesisVoiceName(
+        voiceList.length > 0
+          ? voiceList.find((voice) => voice.ShortName === selectedVoice)?.Name ?? ''
+          : ''
+      );
       synthesizer = SpeechSDK.getSynthesizer();
 
       synthesizer.playbackEnded = function () {
