@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import {
@@ -11,7 +11,7 @@ import {
 import { useKey } from '@/hooks/useKey';
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
 
-export const SpeechSynthesisDemo = () => {
+const SpeechSynthesis = () => {
   const params = useSearchParams();
   const sdk = (params.get('sdk') as 'azure' | 'elevenlabs') || 'azure';
 
@@ -239,5 +239,13 @@ export const SpeechSynthesisDemo = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+export const SpeechSynthesisDemo = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SpeechSynthesis />
+    </Suspense>
   );
 };
