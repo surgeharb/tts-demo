@@ -29,8 +29,8 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
   const [textToSynthesize, setTextToSynthesize] = useState('');
   const [results, setResults] = useState('');
   const [wordBoundaryList, setWordBoundaryList] = useState<any[]>([]);
-  const [phraseDiv, setPhraseDiv] = useState('');
   const [events, setEvents] = useState('');
+  const [logs, setLogs] = useState<string[]>([]);
   const [highlightDiv, setHighlightDiv] = useState('');
   const [authorizationToken, setAuthorizationToken] = useState(null);
   const [sdkInitialized, setSdkInitialized] = useState(false);
@@ -179,6 +179,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
       return;
     }
 
+    setLogs([]);
     setHighlightDiv('');
     setWordBoundaryList([]);
 
@@ -186,9 +187,6 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
 
     const SpeechSDK = provider === 'azure' ? window.SpeechSDK || {} : new Elevenlabs();
     const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, region);
-
-    console.log('voiceList', voiceList);
-    console.log('selectedVoice', selectedVoice);
 
     let synthesizer: any;
 
@@ -220,8 +218,16 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
       const audioConfig = SpeechSDK.AudioConfig.fromSpeakerOutput(player.current);
       synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
     } else {
-      // set the voice name here for Elevenlabs
+      SpeechSDK.SpeechConfig.speechSynthesisVoiceName(selectedVoice);
       synthesizer = SpeechSDK.getSynthesizer();
+
+      synthesizer.playbackEnded = function () {
+        setPauseBtnDisabled(true);
+        setResumeBtnDisabled(true);
+        setStartBtnDisabled(false);
+        setDownloadBtnDisabled(false);
+        console.log('playback finished');
+      };
     }
 
     synthesizer.synthesizing = function (_: any, e: any) {
@@ -245,7 +251,13 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
     synthesizer.synthesisStarted = function (_: any, e: any) {
       const timeEnd = performance.now();
       const elapsed = timeEnd - timeStart;
-      console.log('time till first audio chunk is received: ' + elapsed / 1e3 + 's');
+      console.log('first audio chunk received after: ' + elapsed / 1e3 + 's');
+      setLogs((prevLogs) => {
+        return [
+          ...prevLogs,
+          'first audio chunk received after: ' + Math.round(elapsed * 1e3) / 1e6 + 's',
+        ];
+      });
       setEvents((prevEvents) => {
         return prevEvents + '(synthesis started)' + '\r\n';
       });
@@ -259,7 +271,13 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
     synthesizer.synthesisCompleted = function (_: any, e: any) {
       const timeEnd = performance.now();
       const elapsed = timeEnd - timeStart;
-      console.log('time till synthesis is completed: ' + elapsed / 1e3 + 's');
+      console.log('last audio chunk received after: ' + elapsed / 1e3 + 's');
+      setLogs((prevLogs) => {
+        return [
+          ...prevLogs,
+          'last audio chunk received after: ' + Math.round(elapsed * 1e3) / 1e6 + 's',
+        ];
+      });
 
       if (provider !== 'azure') {
         return;
@@ -280,6 +298,11 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
     // The event signals that the service has stopped processing speech.
     // This can happen when an error is encountered.
     synthesizer.SynthesisCanceled = function (_: any, e: any) {
+      setPauseBtnDisabled(true);
+      setResumeBtnDisabled(true);
+      setStartBtnDisabled(false);
+      setDownloadBtnDisabled(false);
+
       if (provider !== 'azure') {
         return;
       }
@@ -292,10 +315,6 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
       setEvents((prevEvents) => {
         return prevEvents + str + '\r\n';
       });
-      setPauseBtnDisabled(true);
-      setResumeBtnDisabled(true);
-      setStartBtnDisabled(false);
-      setDownloadBtnDisabled(false);
     };
 
     // This event signals that word boundary is received. This indicates the audio boundary of each word.
@@ -339,7 +358,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
             return prevResults + 'synthesis failed. Error detail: ' + result.errorDetails;
           });
         }
-        window.console.log(result);
+        console.log(result);
         synthesizer.close();
         synthesizer = undefined;
       };
@@ -347,10 +366,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
       const err_cb = function (err: any) {
         setStartBtnDisabled(false);
         setDownloadBtnDisabled(false);
-        setPhraseDiv((prevPhraseDiv) => {
-          return prevPhraseDiv + err;
-        });
-        window.console.log(err);
+        console.log(err);
         synthesizer.close();
         synthesizer = undefined;
       };
@@ -366,21 +382,19 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
   };
 
   const pauseSynthesis = () => {
-    // Pause speech synthesis
     player.current.pause();
     setPauseBtnDisabled(true);
     setResumeBtnDisabled(false);
   };
 
   const resumeSynthesis = () => {
-    // Resume speech synthesis
     player.current.resume();
     setPauseBtnDisabled(false);
     setResumeBtnDisabled(true);
   };
 
   const downloadSynthesis = () => {
-    // Download synthesized speech
+    alert('Not implemented yet');
   };
 
   return {
@@ -407,9 +421,9 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
     pauseBtnDisabled,
     resumeBtnDisabled,
     downloadBtnDisabled,
+    logs,
     events,
     results,
-    phraseDiv,
     wordBoundaryList,
     highlightDiv,
   };

@@ -28,6 +28,7 @@ export const SpeechSynthesisDemo = () => {
     resumeBtnDisabled,
     downloadBtnDisabled,
     highlightDiv,
+    logs,
   } = useSpeechSynthesis(provider);
 
   return (
@@ -188,8 +189,8 @@ export const SpeechSynthesisDemo = () => {
         </div>
 
         <div className="flex items-start">
-          <label className="w-1/6 text-right mr-4 align-top">Events</label>
-          <textarea disabled id="eventsDiv" className="flex-1 py-2 px-4 border rounded"></textarea>
+          <label className="w-1/6 text-right mr-4 align-top">Logs</label>
+          <textarea className="flex-1 py-2 px-4 border rounded" defaultValue={logs.join('\n')} />
         </div>
 
         <div className="flex items-start">

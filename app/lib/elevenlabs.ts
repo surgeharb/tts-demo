@@ -1,4 +1,5 @@
 type Synthesizer = {
+  playbackEnded: () => void;
   wordBoundary: () => void;
   synthesizing: () => void;
   synthesisPaused: () => void;
@@ -35,6 +36,7 @@ export class Elevenlabs {
 
   getSynthesizer(): Synthesizer {
     return {
+      playbackEnded: () => {},
       wordBoundary: () => {},
       synthesizing: () => {},
       synthesisPaused: () => {},
@@ -69,10 +71,15 @@ export class Elevenlabs {
     const mediaSource = new MediaSource();
     audio.src = URL.createObjectURL(mediaSource);
 
+    // after the audio is done playing, remove the object url
+    audio.addEventListener('ended', () => {
+      URL.revokeObjectURL(audio.src);
+      synthesiser.playbackEnded();
+    });
+
     mediaSource.addEventListener('sourceopen', () => {
       const sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg');
 
-      synthesiser.synthesisStarted();
       fetch(`https://api.elevenlabs.io/v1/text-to-speech/${this.voiceName}/stream`, options)
         .then((response) => {
           let count = 0;
@@ -81,6 +88,7 @@ export class Elevenlabs {
           // @ts-ignore
           function pump() {
             return reader.read().then(({ done, value }) => {
+              synthesiser.synthesizing();
               if (done) {
                 synthesiser.synthesisCompleted();
                 mediaSource.endOfStream();
@@ -88,7 +96,8 @@ export class Elevenlabs {
               }
               sourceBuffer.appendBuffer(value);
               if (count === 0) {
-                synthesiser.synthesizing();
+                count++;
+                synthesiser.synthesisStarted();
               }
               return pump();
             });
