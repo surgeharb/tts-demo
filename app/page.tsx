@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { SpeechSynthesisDemo } from './components/main-demo';
+import { SpeechSynthesisDemo } from '@/components/main-demo';
 
 export const metadata: Metadata = {
   title: 'Speech Synthesis Demo',

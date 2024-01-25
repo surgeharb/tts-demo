@@ -20,8 +20,6 @@ export class Elevenlabs {
   };
 
   constructor() {
-    console.log('Elevenlabs');
-
     this.SpeechConfig = {
       fromSubscription: (apiKey: string) => {
         this.apiKey = apiKey;
@@ -91,7 +89,10 @@ export class Elevenlabs {
               synthesiser.synthesizing();
               if (done) {
                 synthesiser.synthesisCompleted();
-                mediaSource.endOfStream();
+                mediaSource.removeEventListener('sourceopen', () => {});
+                setTimeout(() => {
+                  mediaSource.endOfStream();
+                }, 0);
                 return;
               }
               sourceBuffer.appendBuffer(value);

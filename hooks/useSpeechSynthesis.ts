@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Elevenlabs } from '../lib/elevenlabs';
+import { isKeyAutomaticallyPopulated } from '@/config/constants';
+import { Elevenlabs } from '@/lib/elevenlabs';
 
 declare global {
   interface Window {
@@ -108,16 +109,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
 
   const updateVoiceListAzure = () => {
     setVoicesLoading(true);
-    fetch(
-      `https://${region}.tts.speech.${
-        region.startsWith('china') ? 'azure.cn' : 'microsoft.com'
-      }/cognitiveservices/voices/list`,
-      {
-        headers: {
-          'Ocp-Apim-Subscription-Key': subscriptionKey,
-        },
-      }
-    )
+    fetch('/api/tts/azure/voices')
       .then((response) => {
         if (response.ok) {
           return response.json();
@@ -140,12 +132,7 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
 
   const updateVoiceListElevenLabs = () => {
     setVoicesLoading(true);
-    fetch('https://api.elevenlabs.io/v1/voices', {
-      method: 'GET',
-      headers: {
-        'xi-api-key': subscriptionKey,
-      },
-    })
+    fetch('/api/tts/elevenlabs/voices')
       .then((response) => {
         if (response.ok) {
           return response.json();
@@ -186,7 +173,11 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
     const timeStart = performance.now();
 
     const SpeechSDK = provider === 'azure' ? window.SpeechSDK || {} : new Elevenlabs();
-    const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, region);
+    let speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, region);
+
+    if (provider === 'azure' && isKeyAutomaticallyPopulated) {
+      speechConfig = SpeechSDK.SpeechConfig.fromAuthorizationToken(subscriptionKey, region);
+    }
 
     let synthesizer: any;
 

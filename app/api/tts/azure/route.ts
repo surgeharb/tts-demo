@@ -20,8 +20,8 @@ export async function GET() {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
         }
-      ).then((response) => response.json());
-      return Response.json({ token: tokenResponse.data, region: speechRegion });
+      ).then((response) => response.text());
+      return Response.json({ token: tokenResponse, region: speechRegion });
     } catch (err) {
       return new Response('There was an error authorizing your speech key.', {
         status: 401,

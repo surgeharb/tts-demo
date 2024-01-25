@@ -1,10 +1,24 @@
 'use client';
 
-import { useState } from 'react';
-import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
+import { useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+
+import {
+  isSSMLToggleEnabled,
+  isRegionPickerEnabled,
+  isKeyAutomaticallyPopulated,
+} from '@/config/constants';
+import { useKey } from '@/hooks/useKey';
+import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
 
 export const SpeechSynthesisDemo = () => {
-  const [provider, setProvider] = useState<'azure' | 'elevenlabs'>('azure');
+  const params = useSearchParams();
+  const sdk = (params.get('sdk') as 'azure' | 'elevenlabs') || 'azure';
+
+  const [provider, setProvider] = useState<'azure' | 'elevenlabs'>(
+    ['azure', 'elevenlabs'].includes(sdk) ? sdk : 'azure'
+  );
+
   const {
     subscriptionKey,
     setSubscriptionKey,
@@ -31,6 +45,22 @@ export const SpeechSynthesisDemo = () => {
     logs,
   } = useSpeechSynthesis(provider);
 
+  const { loading } = useKey(
+    provider,
+    useMemo(
+      () => ({
+        skip: !isKeyAutomaticallyPopulated,
+        onKeyUpdated: setSubscriptionKey,
+        onRegionUpdated: setRegion,
+      }),
+      [setRegion, setSubscriptionKey]
+    )
+  );
+
+  if (loading) {
+    console.info('Loading keys...');
+  }
+
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-5xl">
       <div className="flex flex-col space-y-6 w-full">
@@ -48,56 +78,61 @@ export const SpeechSynthesisDemo = () => {
             <option value="elevenlabs">Eleven Labs</option>
           </select>
         </div>
-        <div className="flex items-center">
-          <label htmlFor="subscriptionKey" className="w-1/6 text-right mr-4">
-            Subscription Key
-          </label>
-          <input
-            id="subscriptionKey"
-            type="text"
-            value={subscriptionKey}
-            onChange={(e) => setSubscriptionKey(e.target.value)}
-            placeholder="YourSubscriptionKey"
-            className="flex-1 py-2 px-4 border rounded"
-          />
-        </div>
 
-        <div className="flex items-center">
-          <label htmlFor="regionOptions" className="w-1/6 text-right mr-4">
-            Region
-          </label>
-          <select
-            id="regionOptions"
-            value={region}
-            onChange={(e) => setRegion(e.target.value)}
-            className="flex-1 py-2 px-4 border rounded"
-          >
-            <option value="westus">West US</option>
-            <option value="westus2">West US2</option>
-            <option value="eastus">East US</option>
-            <option value="eastus2">East US2</option>
-            <option value="centralus">Central US</option>
-            <option value="northcentralus">North Central US</option>
-            <option value="southcentralus">South Central US</option>
-            <option value="westcentralus">West Central US</option>
-            <option value="canadacentral">Canada Central</option>
-            <option value="brazilsouth">Brazil South</option>
-            <option value="eastasia">East Asia</option>
-            <option value="southeastasia">South East Asia</option>
-            <option value="australiaeast">Australia East</option>
-            <option value="centralindia">Central India</option>
-            <option value="japaneast">Japan East</option>
-            <option value="japanwest">Japan West</option>
-            <option value="koreacentral">Korea Central</option>
-            <option value="northeurope">North Europe</option>
-            <option value="westeurope">West Europe</option>
-            <option value="francecentral">France Central</option>
-            <option value="switzerlandnorth">Switzerland North</option>
-            <option value="uksouth">UK South</option>
-            <option value="chinaeast2">China East2 (azure.cn)</option>
-            <option value="chinanorth2">China North2 (azure.cn)</option>
-          </select>
-        </div>
+        {!isKeyAutomaticallyPopulated && (
+          <div className="flex items-center">
+            <label htmlFor="subscriptionKey" className="w-1/6 text-right mr-4">
+              Subscription Key
+            </label>
+            <input
+              id="subscriptionKey"
+              type="text"
+              value={subscriptionKey}
+              onChange={(e) => setSubscriptionKey(e.target.value)}
+              placeholder="YourSubscriptionKey"
+              className="flex-1 py-2 px-4 border rounded"
+            />
+          </div>
+        )}
+
+        {isRegionPickerEnabled && (
+          <div className="flex items-center">
+            <label htmlFor="regionOptions" className="w-1/6 text-right mr-4">
+              Region
+            </label>
+            <select
+              id="regionOptions"
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              className="flex-1 py-2 px-4 border rounded"
+            >
+              <option value="westus">West US</option>
+              <option value="westus2">West US2</option>
+              <option value="eastus">East US</option>
+              <option value="eastus2">East US2</option>
+              <option value="centralus">Central US</option>
+              <option value="northcentralus">North Central US</option>
+              <option value="southcentralus">South Central US</option>
+              <option value="westcentralus">West Central US</option>
+              <option value="canadacentral">Canada Central</option>
+              <option value="brazilsouth">Brazil South</option>
+              <option value="eastasia">East Asia</option>
+              <option value="southeastasia">South East Asia</option>
+              <option value="australiaeast">Australia East</option>
+              <option value="centralindia">Central India</option>
+              <option value="japaneast">Japan East</option>
+              <option value="japanwest">Japan West</option>
+              <option value="koreacentral">Korea Central</option>
+              <option value="northeurope">North Europe</option>
+              <option value="westeurope">West Europe</option>
+              <option value="francecentral">France Central</option>
+              <option value="switzerlandnorth">Switzerland North</option>
+              <option value="uksouth">UK South</option>
+              <option value="chinaeast2">China East2 (azure.cn)</option>
+              <option value="chinanorth2">China North2 (azure.cn)</option>
+            </select>
+          </div>
+        )}
 
         <div className="flex items-center">
           <label htmlFor="voiceOptions" className="w-1/6 text-right mr-4">
@@ -110,7 +145,7 @@ export const SpeechSynthesisDemo = () => {
               disabled={!subscriptionKey || !region || voicesLoading}
               className="py-2 px-4 border rounded mr-4 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {voicesLoading ? 'Loading...' : 'Update voice list'}
+              Update voice list
             </button>
             <select
               disabled={voiceList.length === 0}
@@ -129,19 +164,21 @@ export const SpeechSynthesisDemo = () => {
           </div>
         </div>
 
-        <div className="flex items-center">
-          <label htmlFor="isSSML" className="w-1/6 text-right mr-4">
-            Is SSML
-          </label>
-          <input
-            type="checkbox"
-            id="isSSML"
-            name="isSSML"
-            checked={isSSML}
-            onChange={(e) => setIsSSML(e.target.checked)}
-            className="transform scale-125"
-          />
-        </div>
+        {isSSMLToggleEnabled && (
+          <div className="flex items-center">
+            <label htmlFor="isSSML" className="w-1/6 text-right mr-4">
+              Is SSML
+            </label>
+            <input
+              type="checkbox"
+              id="isSSML"
+              name="isSSML"
+              checked={isSSML}
+              onChange={(e) => setIsSSML(e.target.checked)}
+              className="transform scale-125"
+            />
+          </div>
+        )}
 
         <div className="flex items-center">
           <label htmlFor="synthesisText" className="w-1/6 text-right mr-4">
@@ -154,7 +191,7 @@ export const SpeechSynthesisDemo = () => {
             className="flex-1 py-2 px-4 border rounded"
             placeholder="Input text or ssml for synthesis."
             style={{ height: '100px' }}
-          ></textarea>
+          />
         </div>
 
         <div className="flex items-center justify-center space-x-4">
