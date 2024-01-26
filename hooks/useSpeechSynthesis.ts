@@ -440,7 +440,11 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
       alert('Please enter synthesis content.');
     }
 
-    synthesizer.speakTextAsync(textToSynthesize);
+    if (isSSML) {
+      synthesizer.speakSsmlAsync(textToSynthesize);
+    } else {
+      synthesizer.speakTextAsync(textToSynthesize);
+    }
   };
 
   return {
