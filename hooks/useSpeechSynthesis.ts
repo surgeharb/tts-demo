@@ -391,7 +391,56 @@ export const useSpeechSynthesis = (provider: 'azure' | 'elevenlabs') => {
   };
 
   const downloadSynthesis = () => {
-    alert('Not implemented yet');
+    if (provider !== 'azure') {
+      alert('Download is only supported for Azure');
+      return;
+    }
+
+    const SpeechSDK = window.SpeechSDK || {};
+    let speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, region);
+
+    if (provider === 'azure' && isKeyAutomaticallyPopulated) {
+      speechConfig = SpeechSDK.SpeechConfig.fromAuthorizationToken(subscriptionKey, region);
+    }
+
+    speechConfig.speechSynthesisVoiceName =
+      voiceList.length > 0
+        ? voiceList.find((voice) => voice.ShortName === selectedVoice)?.Name ?? ''
+        : '';
+
+    speechConfig.speechSynthesisOutputFormat =
+      SpeechSDK.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3;
+
+    const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, null);
+
+    synthesizer.SynthesisCanceled = function (s, e) {
+      const cancellationDetails = SpeechSDK.CancellationDetails.fromResult(e.result);
+      let str = '(cancel) Reason: ' + SpeechSDK.CancellationReason[cancellationDetails.reason];
+      if (cancellationDetails.reason === SpeechSDK.CancellationReason.Error) {
+        str += ': ' + e.result.errorDetails;
+      }
+      window.console.log(e);
+    };
+
+    synthesizer.synthesisCompleted = function (s, e) {
+      synthesizer.close();
+      const a = document.createElement('a');
+      const url = window.URL.createObjectURL(new Blob([e.result.audioData]));
+      a.href = url;
+      a.download = 'synth.mp3';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, 0);
+    };
+
+    if (!textToSynthesize) {
+      alert('Please enter synthesis content.');
+    }
+
+    synthesizer.speakTextAsync(textToSynthesize);
   };
 
   return {
